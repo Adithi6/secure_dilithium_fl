@@ -73,6 +73,40 @@ Tune in main.py:
 pip install torch torchvision dilithium-py numpy
 ```
 
+##  Hash vs Direct Signing Comparison
+
+This project implements and compares two approaches for signing model updates using Dilithium:
+
+### 1. Hash-then-Sign (SHA-256 + Dilithium)
+- Model weights are first hashed using SHA-256 (32 bytes)
+- The hash is signed using Dilithium
+- Verification checks both:
+  - Hash integrity
+  - Signature validity
+
+### 2. Direct Signing (Without Hash)
+- Full model update (≈800 KB) is directly signed
+- Signature verification is performed on raw data
+
+---
+
+## 📊 Observations
+
+| Feature              | With Hash        | Without Hash      |
+|---------------------|-----------------|------------------|
+| Input size to sign  | 32 bytes        | ~800 KB          |
+| Speed               | Faster          | Slower           |
+| Security            | Strong integrity| Signature only   |
+| Scalability         | High            | Low              |
+
+---
+
+##  Key Insight
+
+Hashing reduces large model updates into a fixed-size representation, making signing efficient while preserving integrity.
+
+This is especially important in Federated Learning where model updates are large.
+
 ## Run
 
 ```bash
