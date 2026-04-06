@@ -90,7 +90,7 @@ This project implements and compares two approaches for signing model updates us
 
 ---
 
-## 📊 Observations
+##  Observations
 
 | Feature              | With Hash        | Without Hash      |
 |---------------------|-----------------|------------------|
