@@ -1,0 +1,12 @@
+experiment:
+  n_clients: 4
+  n_rounds: 3
+  local_epochs: 1
+  samples_per_client: 500
+
+gossip:
+  fanout: 2
+  max_hops: 3
+
+security:
+  use_hash: true
