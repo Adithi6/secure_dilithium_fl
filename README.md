@@ -101,6 +101,20 @@ This project implements and compares two approaches for signing model updates us
 
 ---
 
+## Effect of Local Epochs
+
+| Local Epochs | Total Time (s) | Final Accuracy |
+|--------------|----------------|----------------|
+| 1            | 10.66          | 77.94%         |
+| 2            | 12.39          | 89.49%         |
+| 3            | 18.12          | 93.16%         |
+| 15           | 40.70          | 95.37%         |
+
+### Observation
+Increasing local epochs improves model accuracy, but it also increases total execution time significantly. Beyond a certain point, the accuracy gain becomes small compared to the added computational cost.
+
+
+
 ##  Key Insight
 
 Hashing reduces large model updates into a fixed-size representation, making signing efficient while preserving integrity.
