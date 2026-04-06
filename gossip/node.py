@@ -56,8 +56,8 @@ class GossipNode:
         Deduplication is handled by GossipProtocol — we just store it here.
         """
         already_have = any(
-            m["msg_hash"] == message["msg_hash"] for m in self.inbox
-        )
+    m["payload"] == message["payload"] for m in self.inbox
+)
         if not already_have:
             self.inbox.append(message)
 

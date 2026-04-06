@@ -17,6 +17,9 @@ from crypto import dilithium_utils
 from utils.weights import apply_weight_arrays, weights_to_bytes
 
 
+USE_HASH = False
+
+
 class FederatedClient:
     def __init__(self, client_id: str, dataloader: DataLoader, device: str):
         self.client_id = client_id
@@ -29,7 +32,6 @@ class FederatedClient:
         print(f"  [{client_id}] keygen : {keygen_ms:.2f} ms  "
               f"(pk={len(self.pk)}B  sk={len(self.sk)}B)")
 
-    # ------------------------------------------------------------------ #
     def local_train(self, global_weight_arrays: list, epochs: int = 1):
         """
         Load the latest global model weights and fine-tune on local data.
@@ -56,28 +58,26 @@ class FederatedClient:
 
         print(f"  [{self.client_id}] trained  | loss: {total_loss/len(self.dataloader):.4f}")
 
-    # ------------------------------------------------------------------ #
     def sign_update(self) -> dict:
         update_bytes = weights_to_bytes(self.model)
-        msg_hash = hashlib.sha256(update_bytes).digest()
 
-        signature, sign_ms = dilithium_utils.sign(self.sk, msg_hash)
+        if USE_HASH:
+            payload = hashlib.sha256(update_bytes).digest()
+            mode = "HASHED"
+        else:
+            payload = update_bytes
+            mode = "RAW"
 
-        # One invalid client for Dilithium verification demo
-        if self.client_id == "client_2":
-            print(f"  [{self.client_id}] MALICIOUS | corrupting signature")
-            bad_sig = bytearray(signature)
-            bad_sig[0] ^= 255
-            signature = bytes(bad_sig)
+        signature, sign_ms = dilithium_utils.sign(self.sk, payload)
 
-        print(f"  [{self.client_id}] signed   | {sign_ms:.3f} ms  "
-              f"update={len(update_bytes)/1024:.1f} KB  "
+        print(f"  [{self.client_id}] signed ({mode}) | {sign_ms:.3f} ms  "
+              f"input={len(payload)} B  update={len(update_bytes)/1024:.1f} KB  "
               f"sig={len(signature)} B")
 
         return {
             "client_id": self.client_id,
             "update_bytes": update_bytes,
-            "msg_hash": msg_hash,
+            "payload": payload,
             "signature": signature,
             "sign_ms": sign_ms,
         }

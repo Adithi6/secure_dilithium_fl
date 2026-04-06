@@ -3,8 +3,8 @@
 # Full flow per round:
 #
 #   1. Server broadcasts global weights to all nodes
-#   2. Each node trains locally  
-#   3. Each node signs its update  
+#   2. Each node trains locally
+#   3. Each node signs its update
 #   4. GossipProtocol spreads every signed update across peers
 #        - Each receiving peer verifies the Dilithium sig before forwarding
 #        - Stops at max_hops or when all peers have seen the message
@@ -25,8 +25,8 @@ N_CLIENTS          = 4
 N_ROUNDS           = 3
 LOCAL_EPOCHS       = 1
 SAMPLES_PER_CLIENT = 500
-GOSSIP_FANOUT      = 2   # each node forwards to this many random peers
-GOSSIP_MAX_HOPS    = 3   # propagation stops after this many hops
+GOSSIP_FANOUT      = 2
+GOSSIP_MAX_HOPS    = 3
 # ────────────────────────────────────────────────────────────
 
 
@@ -66,7 +66,7 @@ def main():
     # ── Server ────────────────────────────────────────────────
     server = FederatedServer(device)
 
-    # ── Nodes (GossipNode wraps FederatedClient) ─────────────
+    # ── Nodes ────────────────────────────────────────────────
     print("── Key generation ──────────────────────────────────")
     nodes: list[GossipNode] = []
     for i in range(N_CLIENTS):
@@ -74,7 +74,7 @@ def main():
         server.register_client(node.client_id, node.pk)
         nodes.append(node)
 
-    # ── Gossip protocol (shared across rounds) ────────────────
+    # ── Gossip protocol ──────────────────────────────────────
     all_pub_keys = {n.client_id: n.pk for n in nodes}
     gossip = GossipProtocol(
         fanout=GOSSIP_FANOUT,
@@ -82,7 +82,7 @@ def main():
         all_pub_keys=all_pub_keys,
     )
 
-    # ── Federated rounds ──────────────────────────────────────
+    # ── Federated rounds ─────────────────────────────────────
     for round_num in range(1, N_ROUNDS + 1):
         print(f"\n── Round {round_num}/{N_ROUNDS} ──────────────────────────────────")
 
@@ -98,22 +98,20 @@ def main():
         for node in nodes:
             node.sign_update()
 
-        # Step 3: gossip — spread signed updates peer-to-peer
-        #   Each peer verifies the Dilithium signature before forwarding.
-        #   After this, every node's inbox holds all verified updates.
+        # Step 3: gossip
         print("\n  [gossip propagation]")
         gossip.run_round(nodes)
         gossip.print_gossip_summary()
 
         # Step 4: server collects from node inboxes, verifies again, FedAvg
-        #   De-duplicate by msg_hash so the server sees each update exactly once.
         print("\n  [server verification & aggregation]")
-        seen_hashes: set[bytes] = set()
+        seen_payloads: set[bytes] = set()
         all_submissions: list[dict] = []
+
         for node in nodes:
             for sub in node.get_all_submissions():
-                if sub["msg_hash"] not in seen_hashes:
-                    seen_hashes.add(sub["msg_hash"])
+                if sub["payload"] not in seen_payloads:
+                    seen_payloads.add(sub["payload"])
                     all_submissions.append(sub)
 
         server.verify_and_aggregate(all_submissions, round_num=round_num)
@@ -122,7 +120,7 @@ def main():
         accuracy = server.evaluate(test_loader)
         print(f"\n  Global model accuracy : {accuracy:.2f}%")
 
-    # ── Final timing summary ──────────────────────────────────
+    # ── Final timing summary ─────────────────────────────────
     print_timing_table(server.all_timings)
 
 

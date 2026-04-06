@@ -33,26 +33,21 @@ class GossipProtocol:
         self._seen.clear()
         self.gossip_timings.clear()
 
-    def _verify_before_forward(
-        self, sender_id: str, message: dict
-    ) -> tuple[bool, float]:
-        """
-        Verify integrity + Dilithium signature of a received gossip message.
-        """
+    def _verify_before_forward(self, sender_id: str, message: dict) -> tuple[bool, float]:
         pk = self.all_pub_keys.get(message["client_id"])
         if pk is None:
             return False, 0.0
 
-        # Step 1: recompute hash from received bytes
-        recomputed_hash = hashlib.sha256(message["update_bytes"]).digest()
+        if len(message["payload"]) == 32:
+            expected_payload = hashlib.sha256(message["update_bytes"]).digest()
+        else:
+            expected_payload = message["update_bytes"]
 
-        # Step 2: check integrity
-        if recomputed_hash != message["msg_hash"]:
+        if expected_payload != message["payload"]:
             return False, 0.0
 
-        # Step 3: verify signature
         is_valid, verify_ms = dilithium_utils.verify(
-            pk, message["msg_hash"], message["signature"]
+            pk, message["payload"], message["signature"]
         )
         return is_valid, verify_ms
 
@@ -66,7 +61,7 @@ class GossipProtocol:
         """
         Recursively spread `message` from `origin_node` to `fanout` random peers.
         """
-        msg_id = message["msg_hash"]
+        msg_id = message["payload"]
 
         if msg_id in self._seen or hop >= self.max_hops:
             return
