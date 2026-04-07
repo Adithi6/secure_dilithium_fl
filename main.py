@@ -10,7 +10,7 @@
 #        - Stops at max_hops or when all peers have seen the message
 #   5. Server collects each node's full inbox, verifies again, runs FedAvg
 #   6. Server evaluates global model accuracy
-
+import time
 import numpy as np
 import torch
 
@@ -23,7 +23,7 @@ from server.fl_server import FederatedServer
 # ── Config ──────────────────────────────────────────────────
 N_CLIENTS          = 4
 N_ROUNDS           = 3
-LOCAL_EPOCHS       = 1
+LOCAL_EPOCHS       = 15
 SAMPLES_PER_CLIENT = 500
 GOSSIP_FANOUT      = 2
 GOSSIP_MAX_HOPS    = 3
@@ -51,11 +51,15 @@ def print_timing_table(all_timings: list[dict]):
 
 
 def main():
+    
+    start_time = time.time()
     device = "cuda" if torch.cuda.is_available() else "cpu"
     print(f"\nDevice : {device}")
     print(f"Config : {N_CLIENTS} clients | {N_ROUNDS} rounds | "
           f"{LOCAL_EPOCHS} local epoch(s) | "
           f"gossip fanout={GOSSIP_FANOUT} max_hops={GOSSIP_MAX_HOPS}\n")
+    
+    
 
     # ── Data ──────────────────────────────────────────────────
     client_loaders, test_loader = make_client_loaders(
@@ -84,6 +88,7 @@ def main():
 
     # ── Federated rounds ─────────────────────────────────────
     for round_num in range(1, N_ROUNDS + 1):
+        round_start = time.time()
         print(f"\n── Round {round_num}/{N_ROUNDS} ──────────────────────────────────")
 
         global_weights = server.global_weight_arrays()
@@ -119,8 +124,17 @@ def main():
         # Step 5: evaluate
         accuracy = server.evaluate(test_loader)
         print(f"\n  Global model accuracy : {accuracy:.2f}%")
+        
+        round_end = time.time()
+        print(f"  Round {round_num} execution time : {round_end - round_start:.2f} seconds")
+
+    end_time = time.time()
+    print(f"\nTotal execution time : {end_time - start_time:.2f} seconds")
 
     # ── Final timing summary ─────────────────────────────────
+
+    
+
     print_timing_table(server.all_timings)
 
 
